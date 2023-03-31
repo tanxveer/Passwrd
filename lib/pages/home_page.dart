@@ -1,7 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:password_manager/Data/data_model.dart';
 import 'package:password_manager/pages/change_password.dart';
 
 import '../components/dialog_box.dart';
@@ -16,6 +19,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // reference to Hive
+  // final _mySafe = Hive.box('mySafe');
+
+  //instance of Data Model
+  PasswordDataModel db = PasswordDataModel();
+
+  @override
+  void initState() {
+    db.loadData();
+    super.initState();
+    auth = LocalAuthentication();
+  }
+
   late final LocalAuthentication auth;
   late bool _isAuthenticated = false;
   late String passBackUp;
@@ -25,19 +41,11 @@ class _MyHomePageState extends State<MyHomePage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  //database
-  List passwordList = [
-    ['Gmail', '@gmail.com', 'pass123'],
-    ['Apple', 'apple.com', 'pass234'],
-    ['Gmail', '@gmail.com', 'pass123'],
-    ['Gmail', '@gmail.com', 'pass123'],
-    ['Apple', 'apple.com', 'pass234'],
-  ];
-
+  //copy Password to clipboard
   void copyPassword(int index) async {
     await _authenticate();
     if (_isAuthenticated) {
-      await Clipboard.setData(ClipboardData(text: passwordList[index][2]))
+      await Clipboard.setData(ClipboardData(text: db.passwordList[index][2]))
           .then((value) => {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -47,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
               });
+      _isAuthenticated = false;
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,11 +80,12 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             )
           : {
-              passwordList.add([
+              db.passwordList.add([
                 _companyController.text.trim(),
                 _usernameController.text.trim(),
                 _passwordController.text.trim()
               ]),
+              db.updateDatabase(),
               _companyController.clear(),
               _usernameController.clear(),
               _passwordController.clear(),
@@ -85,11 +95,26 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   //delete Existing Credentials
-  void deleteCredential(int index) {
-    setState(() {
-      passwordList.removeAt(index);
-    });
-    Navigator.of(context).pop();
+  void deleteCredential(int index) async {
+    await _authenticate();
+    if (_isAuthenticated) {
+      setState(() {
+        db.passwordList.removeAt(index);
+      });
+      db.updateDatabase();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _isAuthenticated = false;
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(milliseconds: 2500),
+          dismissDirection: DismissDirection.horizontal,
+          content: Text('Please authenticate yourself first !'),
+        ),
+      );
+    }
   }
 
   //openCurrentTile
@@ -97,9 +122,14 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ChangePasswordPage(
-          company: passwordList[index][0],
-          username: passwordList[index][1],
+          company: db.passwordList[index][0],
+          username: db.passwordList[index][1],
+          onSave: () => changeExistingCredential(index),
           deleteTapped: () => deleteCredential(index),
+          generatePassword: () => createNewPassword(),
+          companyController: _companyController,
+          usernameController: _usernameController,
+          passwordController: _passwordController,
         ),
       ),
     );
@@ -122,10 +152,42 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    auth = LocalAuthentication();
+  //change Existing Credentials
+  void changeExistingCredential(int index) async {
+    await _authenticate();
+    if (_isAuthenticated) {
+      setState(() {
+        if (_companyController.text.trim().isNotEmpty) {
+          db.passwordList[index][0] = _companyController.text.trim();
+        }
+        if (_usernameController.text.trim().isNotEmpty) {
+          db.passwordList[index][1] = _usernameController.text.trim();
+        }
+        if (_passwordController.text.trim().isNotEmpty) {
+          db.passwordList[index][2] = _passwordController.text.trim();
+        }
+      });
+      db.updateDatabase();
+      //clear textFields
+      _companyController.clear();
+      _usernameController.clear();
+      _passwordController.clear();
+      //pop the page
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _isAuthenticated = false;
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(milliseconds: 2500),
+          dismissDirection: DismissDirection.horizontal,
+          content: Text('Please authenticate yourself first !'),
+        ),
+      );
+    }
+    //update database
+    db.updateDatabase();
   }
 
   @override
@@ -169,20 +231,43 @@ class _MyHomePageState extends State<MyHomePage> {
           color: Colors.black,
         ),
       ),
-      body: ListView.builder(
-        itemCount: passwordList.length,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        itemBuilder: (BuildContext context, int index) {
-          return IdTile(
-            companyName: passwordList[index][0],
-            id: passwordList[index][1],
-            copyTapped: () => copyPassword(index),
-            listTapped: () => openCurrentTile(index),
-          );
-        },
-      ),
+      body: db.passwordList.isNotEmpty
+          ? ListView.builder(
+              itemCount: db.passwordList.length,
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemBuilder: (BuildContext context, int index) {
+                return IdTile(
+                  companyName: db.passwordList[index][0],
+                  id: db.passwordList[index][1],
+                  copyTapped: () => copyPassword(index),
+                  listTapped: () => openCurrentTile(index),
+                );
+              },
+            )
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'No account here',
+                    style: GoogleFonts.lato(
+                      textStyle: const TextStyle(
+                          color: CupertinoColors.systemGrey, fontSize: 20),
+                    ),
+                  ),
+                  Text(
+                    'Use the + icon to add one',
+                    style: GoogleFonts.lato(
+                      textStyle: const TextStyle(
+                          color: CupertinoColors.systemGrey, fontSize: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 

@@ -10,8 +10,8 @@ class NewPasswordPage extends StatefulWidget {
       required this.generatePass})
       : super(key: key);
 
-  final Function() onSave;
-  final Function() generatePass;
+  final VoidCallback onSave;
+  final VoidCallback generatePass;
   final TextEditingController companyController;
   final TextEditingController usernameController;
   final TextEditingController passwordController;
@@ -25,18 +25,16 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     hiddenPassword = true;
   }
 
   @override
   void dispose() {
-    // TODO: implement dispose
-    super.dispose();
     widget.companyController.clear();
     widget.usernameController.clear();
     widget.passwordController.clear();
+    super.dispose();
   }
 
   @override
@@ -121,8 +119,8 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                           hiddenPassword = !hiddenPassword;
                         }),
                     icon: hiddenPassword
-                        ? const Icon(Icons.visibility_outlined)
-                        : const Icon(Icons.visibility_off_outlined)),
+                        ? const Icon(Icons.visibility_off_outlined)
+                        : const Icon(Icons.visibility_outlined),),
                 hintStyle: const TextStyle(color: Colors.white38),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white),

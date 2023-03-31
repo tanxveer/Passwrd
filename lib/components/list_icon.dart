@@ -17,8 +17,8 @@ class ListIcon extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          companyName.isNotEmpty ? companyName[0] : '',
-          style: GoogleFonts.dancingScript(
+          companyName[0],
+          style: GoogleFonts.openSans(
               textStyle: const TextStyle(
                   fontSize: 18,
                   color: Colors.black,

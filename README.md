@@ -1,4 +1,4 @@
-# password_manager
+# Passwrd: A Password Manager
 
 A new Flutter project.
 

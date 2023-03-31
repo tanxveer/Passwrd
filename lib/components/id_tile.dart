@@ -18,6 +18,7 @@ class IdTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      selectedTileColor: Colors.transparent,
       onTap: listTapped,
       textColor: Colors.white,
       leading: ListIcon(companyName: companyName),
