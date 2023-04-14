@@ -7,6 +7,13 @@ class PasswordDataModel {
   final _mySafe = Hive.box('mySafe');
 
   //load data from the database
+  void createData() {
+    passwordList = [
+      ['Demo.com', 'Username', '********']
+    ];
+  }
+
+  //load data from the database
   void loadData() {
     passwordList = _mySafe.get('PASSWORDLIST');
   }

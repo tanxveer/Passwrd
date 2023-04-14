@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:password_manager/Data/data_model.dart';
 import 'package:password_manager/pages/change_password.dart';
@@ -20,14 +21,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   // reference to Hive
-  // final _mySafe = Hive.box('mySafe');
+  final _mySafe = Hive.box('mySafe');
 
   //instance of Data Model
   PasswordDataModel db = PasswordDataModel();
 
   @override
   void initState() {
-    db.loadData();
+    if (_mySafe.get('PASSWORDLIST') == null) {
+      db.createData();
+    } else {
+      db.loadData();
+    }
     super.initState();
     auth = LocalAuthentication();
   }
